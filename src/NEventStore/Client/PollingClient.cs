@@ -1,4 +1,6 @@
-﻿namespace NEventStore.Client
+﻿using NEventStore.Persistence.Sql;
+
+namespace NEventStore.Client
 {
     using System;
     using System.Collections.Generic;
@@ -44,27 +46,32 @@
 
         public override IObserveCommits ObserveFromBucket(string bucketId, string checkpointToken = null)
         {
-            return new PollingObserveCommits(PersistStreams, _interval, bucketId, checkpointToken);
+            return new PollingObserveCommits(PersistStreams, _interval, new BucketList {BucketId = bucketId }, checkpointToken);
+        }
+
+        public override IObserveCommits ObserveFromBucket(BucketList buckets, string checkpointToken = null)
+        {
+            return new PollingObserveCommits(PersistStreams, _interval, buckets, checkpointToken);
         }
 
         private class PollingObserveCommits : IObserveCommits
         {
-            private ILog Logger = LogFactory.BuildLogger(typeof (PollingClient));
+            private ILog Logger = LogFactory.BuildLogger(typeof(PollingClient));
             private readonly IPersistStreams _persistStreams;
             private string _checkpointToken;
             private readonly int _interval;
-            private readonly string _bucketId;
+            private readonly BucketList buckets;
             private readonly Subject<ICommit> _subject = new Subject<ICommit>();
             private readonly CancellationTokenSource _stopRequested = new CancellationTokenSource();
             private TaskCompletionSource<Unit> _runningTaskCompletionSource;
             private int _isPolling = 0;
 
-            public PollingObserveCommits(IPersistStreams persistStreams, int interval, string bucketId, string checkpointToken = null)
+            public PollingObserveCommits(IPersistStreams persistStreams, int interval, BucketList buckets, string checkpointToken = null)
             {
                 _persistStreams = persistStreams;
                 _checkpointToken = checkpointToken;
                 _interval = interval;
-                _bucketId = bucketId;
+                this.buckets = buckets;
             }
 
             public IDisposable Subscribe(IObserver<ICommit> observer)
@@ -110,7 +117,7 @@
                     {
                         DoPoll();
                         PollLoop();
-                    },_ => Dispose());
+                    }, _ => Dispose());
             }
 
             private void DoPoll()
@@ -119,9 +126,9 @@
                 {
                     try
                     {
-                        var commits = _bucketId == null ? 
+                        var commits = this.buckets == null ?
                             _persistStreams.GetFrom(_checkpointToken) :
-                            _persistStreams.GetFrom(_bucketId, _checkpointToken);
+                            _persistStreams.GetFrom(this.buckets, _checkpointToken);
 
                         foreach (var commit in commits)
                         {

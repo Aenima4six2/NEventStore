@@ -1,3 +1,5 @@
+using NEventStore.Persistence.Sql;
+
 namespace NEventStore.Persistence
 {
     using System;
@@ -47,6 +49,14 @@ namespace NEventStore.Persistence
         /// <param name="checkpointToken">The checkpoint token.</param>
         /// <returns>An enumerable of Commits.</returns>
         IEnumerable<ICommit> GetFrom(string bucketId, string checkpointToken);
+
+        /// <summary>
+        ///     Gets all commits after from the specified checkpoint. Use null to get from the beginning.
+        /// </summary>
+        /// <param name="buckets">The values which uniquely identifies the buckets the stream belongs to.</param>
+        /// <param name="checkpointToken">The checkpoint token.</param>
+        /// <returns>An enumerable of Commits.</returns>
+        IEnumerable<ICommit> GetFrom(BucketList buckets, string checkpointToken);
 
         /// <summary>
         /// Gets a checkpoint object that is comparable with other checkpoints from this storage engine.

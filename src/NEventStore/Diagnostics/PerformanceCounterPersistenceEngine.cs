@@ -1,3 +1,5 @@
+using NEventStore.Persistence.Sql;
+
 namespace NEventStore.Diagnostics
 {
     using System;
@@ -74,6 +76,11 @@ namespace NEventStore.Diagnostics
         public IEnumerable<ICommit> GetFrom(string bucketId, string checkpointToken)
         {
             return _persistence.GetFrom(bucketId,checkpointToken);
+        }
+
+        public IEnumerable<ICommit> GetFrom(BucketList buckets, string checkpointToken)
+        {
+            return _persistence.GetFrom(buckets, checkpointToken);
         }
 
         public bool AddSnapshot(ISnapshot snapshot)

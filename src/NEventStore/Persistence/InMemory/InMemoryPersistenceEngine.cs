@@ -1,3 +1,5 @@
+using NEventStore.Persistence.Sql;
+
 namespace NEventStore.Persistence.InMemory
 {
     using System;
@@ -9,7 +11,7 @@ namespace NEventStore.Persistence.InMemory
 
     public class InMemoryPersistenceEngine : IPersistStreams
     {
-        private static readonly ILog Logger = LogFactory.BuildLogger(typeof (InMemoryPersistenceEngine));
+        private static readonly ILog Logger = LogFactory.BuildLogger(typeof(InMemoryPersistenceEngine));
         private readonly ConcurrentDictionary<string, Bucket> _buckets = new ConcurrentDictionary<string, Bucket>();
         private bool _disposed;
         private int _checkpoint;
@@ -46,9 +48,17 @@ namespace NEventStore.Persistence.InMemory
 
         public IEnumerable<ICommit> GetFrom(string bucketId, string checkpointToken)
         {
+            return this.GetFrom(new BucketList{BucketId = bucketId}, checkpointToken);
+        }
+
+        public IEnumerable<ICommit> GetFrom(BucketList buckets, string checkpointToken)
+        {
             ThrowWhenDisposed();
-            Logger.Debug(Resources.GettingAllCommitsFromBucketAndCheckpoint, bucketId, checkpointToken);
-            return this[bucketId].GetFrom(GetCheckpoint(checkpointToken));
+            Logger.Debug(Resources.GettingAllCommitsFromBucketAndCheckpoint, buckets, checkpointToken);
+            return buckets.ToList()
+                .Where(b => b != null)
+                .Aggregate(Enumerable.Empty<ICommit>(), (commits, bucketId) =>
+                    commits.Concat(this[bucketId].GetFrom(this.GetCheckpoint(checkpointToken))));
         }
 
         public IEnumerable<ICommit> GetFrom(string checkpointToken)
@@ -304,7 +314,7 @@ namespace NEventStore.Persistence.InMemory
         {
             private readonly IList<InMemoryCommit> _commits = new List<InMemoryCommit>();
             private readonly ICollection<IdentityForDuplicationDetection> _potentialDuplicates = new HashSet<IdentityForDuplicationDetection>();
-            private readonly ICollection<IdentityForConcurrencyConflictDetection> _potentialConflicts = new HashSet<IdentityForConcurrencyConflictDetection>(); 
+            private readonly ICollection<IdentityForConcurrencyConflictDetection> _potentialConflicts = new HashSet<IdentityForConcurrencyConflictDetection>();
 
             public IEnumerable<InMemoryCommit> GetCommits()
             {

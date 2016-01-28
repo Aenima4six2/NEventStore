@@ -54,6 +54,7 @@
     <Compile Include="AccessSnapshotsExtensions.cs" />
     <Compile Include="AsynchronousDispatchSchedulerWireup.cs" />
     <Compile Include="Bucket.cs" />
+    <Compile Include="BucketList.cs" />
     <Compile Include="Client\Messages.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

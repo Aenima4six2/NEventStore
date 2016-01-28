@@ -1,3 +1,5 @@
+using NEventStore.Persistence.Sql;
+
 namespace NEventStore.Persistence
 {
     using System;
@@ -73,6 +75,11 @@ namespace NEventStore.Persistence
         public IEnumerable<ICommit> GetFrom(string bucketId, string checkpointToken)
         {
             return ExecuteHooks(_original.GetFrom(bucketId, checkpointToken));
+        }
+
+        public IEnumerable<ICommit> GetFrom(BucketList buckets, string checkpointToken)
+        {
+            return ExecuteHooks(_original.GetFrom(buckets, checkpointToken));
         }
 
         public ICheckpoint GetCheckpoint(string checkpointToken)

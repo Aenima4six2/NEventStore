@@ -1,3 +1,5 @@
+using NEventStore.Persistence.Sql;
+
 #pragma warning disable 169
 // ReSharper disable InconsistentNaming
 
@@ -235,7 +237,7 @@ namespace NEventStore.Persistence.AcceptanceTests
             _attempt2 = new CommitAttempt(
                 _attempt1.BucketId,         // <--- Same bucket
                 _attempt1.StreamId,         // <--- Same stream it
-                _attempt1.StreamRevision +10,
+                _attempt1.StreamRevision + 10,
                 Guid.NewGuid(),
                 _attempt1.CommitSequence,   // <--- Same commit seq
                 DateTime.UtcNow,
@@ -612,12 +614,13 @@ namespace NEventStore.Persistence.AcceptanceTests
         private List<Guid> _committedOnBucket1;
         private List<Guid> _committedOnBucket2;
         private ICollection<Guid> _loaded;
+        private ICollection<Guid> _mulit;
         private Guid _streamId;
         private const int checkPoint = 2;
 
         protected override void Context()
         {
-            _committedOnBucket1 = Persistence.CommitMany(ConfiguredPageSizeForTesting + 1,null, "b1").Select(c => c.CommitId).ToList();
+            _committedOnBucket1 = Persistence.CommitMany(ConfiguredPageSizeForTesting + 1, null, "b1").Select(c => c.CommitId).ToList();
             _committedOnBucket2 = Persistence.CommitMany(ConfiguredPageSizeForTesting + 1, null, "b2").Select(c => c.CommitId).ToList();
             _committedOnBucket1.AddRange(Persistence.CommitMany(4, null, "b1").Select(c => c.CommitId));
         }
@@ -625,6 +628,11 @@ namespace NEventStore.Persistence.AcceptanceTests
         protected override void Because()
         {
             _loaded = Persistence.GetFrom("b1", checkPoint.ToString()).Select(c => c.CommitId).ToList();
+            this._mulit = Persistence.GetFrom(new BucketList
+            {
+                BucketId = "b1",
+                BucketId2 = "b2"
+            }, checkPoint.ToString()).Select(c => c.CommitId).ToList();
         }
 
         [Fact]
@@ -637,12 +645,20 @@ namespace NEventStore.Persistence.AcceptanceTests
         public void should_load_only_the_commits_on_bucket1_starting_from_the_checkpoint()
         {
             _committedOnBucket1.Skip(checkPoint).All(x => _loaded.Contains(x)).ShouldBeTrue(); // all commits should be found in loaded collection
-        } 
-        
+        }
+
         [Fact]
         public void should_not_load_the_commits_from_bucket2()
         {
-            _committedOnBucket2.All(x => !_loaded.Contains(x)).ShouldBeTrue(); 
+            _committedOnBucket2.All(x => !_loaded.Contains(x)).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void should_load_commits_from_both_buckets()
+        {
+            this._committedOnBucket1.Any(x => this._mulit.Contains(x)).ShouldBeTrue();
+            this._committedOnBucket2.Any(x => this._mulit.Contains(x)).ShouldBeTrue();
+            this._mulit.Count.ShouldBe(8);
         }
     }
 
